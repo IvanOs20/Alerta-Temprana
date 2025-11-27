@@ -1,4 +1,4 @@
-const { sequelize, tb_notificaciones, tb_docentes, tb_alumnos } = require('../models');
+const { sequelize, tb_notificaciones, tb_docentes, tb_alumnos } = require('../../models');
 
 (async () => {
   try {

@@ -1,5 +1,5 @@
 // src/testMaterias.js
-const { sequelize, tb_materias } = require('../models');
+const { sequelize, tb_materias } = require('../../models');
 
 (async () => {
   try {

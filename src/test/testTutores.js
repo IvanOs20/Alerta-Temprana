@@ -1,5 +1,5 @@
 // src/testTutores.js
-const { sequelize, tb_tutores } = require('../models');
+const { sequelize, tb_tutores } = require('../../models');
 
 (async () => {
   try {

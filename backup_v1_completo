@@ -1,0 +1,176 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 16.3
+-- Dumped by pg_dump version 16.3
+
+-- Started on 2025-11-27 12:22:10
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- TOC entry 4888 (class 0 OID 41421)
+-- Dependencies: 225
+-- Data for Name: tb_alumno_materia; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.tb_alumno_materia (id_alumno, id_materia, calificacion) FROM stdin;
+1	1	9.25
+13	1	10.00
+10	1	9.00
+\.
+
+
+--
+-- TOC entry 4887 (class 0 OID 41416)
+-- Dependencies: 224
+-- Data for Name: tb_alumnos; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.tb_alumnos (id_alumno, nombre, apellidos, id_grupo, id_tutor) FROM stdin;
+1	Luis	Fernández	1	1
+7	Antonio	Ixmaatlahua	1	1
+10	Ivan	UUUUUUUU	1	1
+13	Alejandro	Magno	3	2
+2	Aquiles	Tercero	1	1
+3	Maximus	Tercero	1	1
+4	Kobe	Bryan	1	1
+5	Ilia	Topuria	1	1
+6	Mike	Tyson	1	1
+8	Gervonta	Davis	1	1
+9	Leonel	Messi	1	1
+\.
+
+
+--
+-- TOC entry 4879 (class 0 OID 41392)
+-- Dependencies: 216
+-- Data for Name: tb_docentes; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.tb_docentes (id_docente, nombre, apellidos) FROM stdin;
+1	Carlos	Ramírez
+2	Ivan	Sanchez
+3	Elon	Musk
+\.
+
+
+--
+-- TOC entry 4883 (class 0 OID 41404)
+-- Dependencies: 220
+-- Data for Name: tb_grupos; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.tb_grupos (id_grupo, id_docente, grado, grupo) FROM stdin;
+1	1	3	A
+3	1	6	A
+5	2	5	A
+\.
+
+
+--
+-- TOC entry 4885 (class 0 OID 41410)
+-- Dependencies: 222
+-- Data for Name: tb_materias; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.tb_materias (id_materia, nombre_materia) FROM stdin;
+1	Matemáticas
+\.
+
+
+--
+-- TOC entry 4890 (class 0 OID 41427)
+-- Dependencies: 227
+-- Data for Name: tb_notificaciones; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.tb_notificaciones (id_notificacion, id_docente, id_alumno, mensaje, fecha_envio, hora_envio) FROM stdin;
+1	1	1	Revisión de tareas el viernes a las 10:00 AM.	2025-11-12	09:25:25
+3	2	13	Recuerda traer la cartulina para la exposición de mañana.	2025-11-27	11:48:31
+4	2	13	De los errores se aprende	2025-11-27	11:49:53
+\.
+
+
+--
+-- TOC entry 4881 (class 0 OID 41398)
+-- Dependencies: 218
+-- Data for Name: tb_tutores; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.tb_tutores (id_tutor, nombre, apellidos, telefono) FROM stdin;
+1	María	Gómez	5551234567
+2	Axel	Diaz	555-9999
+\.
+
+
+--
+-- TOC entry 4897 (class 0 OID 0)
+-- Dependencies: 223
+-- Name: tb_alumnos_id_alumno_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.tb_alumnos_id_alumno_seq', 13, true);
+
+
+--
+-- TOC entry 4898 (class 0 OID 0)
+-- Dependencies: 215
+-- Name: tb_docentes_id_docente_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.tb_docentes_id_docente_seq', 5, true);
+
+
+--
+-- TOC entry 4899 (class 0 OID 0)
+-- Dependencies: 219
+-- Name: tb_grupos_id_grupo_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.tb_grupos_id_grupo_seq', 5, true);
+
+
+--
+-- TOC entry 4900 (class 0 OID 0)
+-- Dependencies: 221
+-- Name: tb_materias_id_materia_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.tb_materias_id_materia_seq', 2, true);
+
+
+--
+-- TOC entry 4901 (class 0 OID 0)
+-- Dependencies: 226
+-- Name: tb_notificaciones_id_notificacion_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.tb_notificaciones_id_notificacion_seq', 4, true);
+
+
+--
+-- TOC entry 4902 (class 0 OID 0)
+-- Dependencies: 217
+-- Name: tb_tutores_id_tutor_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.tb_tutores_id_tutor_seq', 3, true);
+
+
+-- Completed on 2025-11-27 12:22:11
+
+--
+-- PostgreSQL database dump complete
+--
+

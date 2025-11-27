@@ -1,4 +1,4 @@
-const { sequelize, tb_alumno_materia, tb_alumnos, tb_materias } = require('../models');
+const { sequelize, tb_alumno_materia, tb_alumnos, tb_materias } = require('../../models');
 
 (async () => {
   try {
