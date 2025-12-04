@@ -14,6 +14,11 @@ module.exports = (sequelize, DataTypes) => {
     apellidos: {
       type: DataTypes.STRING,
       allowNull: false
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true // Un correo por profesor
     }
   }, {
     tableName: 'tb_docentes',
