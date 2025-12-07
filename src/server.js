@@ -1,11 +1,14 @@
 require('dotenv').config(); // Carga las variables de entorno
 const express = require('express');
+const cors = require('cors');
 const app = express();
+
 
 // 1. IMPORTAR LA BASE DE DATOS
 const db = require('./models'); 
 
 // Middleware para entender JSON y Formularios
+app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
 

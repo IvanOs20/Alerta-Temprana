@@ -15,8 +15,7 @@ const transporter = nodemailer.createTransport({
 const enviarCorreoActivacion = async (emailDestino, nombre, token) => {
   try {
     // URL del Frontend donde el usuario pondrá su contraseña nueva
-    // Por ahora apuntamos a localhost, luego será tu dominio real.
-    const urlActivacion = `http://localhost:5173/activar-cuenta?token=${token}`;
+    const urlActivacion = `http://192.168.233.187:5173/activar-cuenta?token=${token}`;
 
     const info = await transporter.sendMail({
       from: '"Sistema Escolar 🏫" <tu_correo_real@gmail.com>',

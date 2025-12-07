@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 
-// 1. Ruta para activar cuenta (ESTA ES LA QUE TE FALTA O TIENE ERROR)
+// 1. Ruta para activar cuenta 
 router.post('/activar-cuenta', authController.activarCuenta);
 
 // 2. Ruta para iniciar sesión
