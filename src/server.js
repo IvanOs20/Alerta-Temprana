@@ -42,14 +42,14 @@ const PORT = process.env.PORT || 3000;
 
 // CAMBIO IMPORTANTE: Usamos { alter: true } 
 // Esto actualiza las tablas si hay cambios, pero NO BORRA tus datos.
-db.sequelize.sync({ alter: true }).then(() => {
+db.sequelize.sync().then(() => {  // <--- ¡AQUÍ ESTÁ EL CAMBIO!
     console.log("------------------------------------------------");
-    console.log("Base de datos sincronizada (Modo: Alter).");
+    console.log("Base de datos conectada (Sin sincronización forzada).");
     console.log("------------------------------------------------");
     
     app.listen(PORT, () => {
         console.log(`Servidor corriendo en puerto ${PORT}`);
     });
 }).catch((err) => {
-    console.error("Error al sincronizar la base de datos:", err);
+    console.error("Error al conectar la base de datos:", err);
 });
