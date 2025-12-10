@@ -20,7 +20,7 @@ const tutorRoutes = require('./routes/tutorRoutes');
 const materiaRoutes = require('./routes/materiaRoutes');
 const alumnoMateriaRoutes = require('./routes/alumnoMateriaRoutes');
 const notificacionRoutes = require('./routes/notificacionRoutes');
-const authRoutes = require('./routes/authRoutes'); // <--- Importado correctamente
+const authRoutes = require('./routes/authRoutes'); 
 
 // --- USAR RUTAS ---
 app.use('/api/alumnos', alumnoRoutes);
@@ -30,7 +30,7 @@ app.use('/api/tutores', tutorRoutes);
 app.use('/api/materias', materiaRoutes);
 app.use('/api/alumnomateria', alumnoMateriaRoutes);
 app.use('/api/notificaciones', notificacionRoutes);
-app.use('/api/auth', authRoutes); // <--- ¡ACTIVO! Tus rutas de login estarán aquí
+app.use('/api/auth', authRoutes); 
 
 // Ruta de prueba
 app.get('/', (req, res) => {
