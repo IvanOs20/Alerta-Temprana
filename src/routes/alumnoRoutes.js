@@ -1,20 +1,42 @@
 const express = require('express');
 const router = express.Router();
-const alumnos = require('../controllers/alumnoController'); // Importamos el controller
+const alumnos = require('../controllers/alumnoController'); 
+// 1. Importamos la seguridad
+const { verifyToken, isAdmin } = require('../middleware/authJwt');
 
-// Crear un nuevo alumno
-router.post('/', alumnos.create);
+// 2. Middleware para cabeceras
+router.use((req, res, next) => {
+  res.header(
+    "Access-Control-Allow-Headers",
+    "x-access-token, Origin, Content-Type, Accept"
+  );
+  next();
+});
+
+// ------------------------------------------------------------------
+// ZONA ADMIN (Gestión de Alumnos)
+// ------------------------------------------------------------------
+
+// Crear un nuevo alumno (Solo Admin)
+router.post('/', [verifyToken, isAdmin], alumnos.create);
+
+// Actualizar datos del alumno (Solo Admin puede cambiar nombres o grupos)
+router.put('/:id', [verifyToken, isAdmin], alumnos.update);
+
+// Eliminar un alumno (Solo Admin puede dar de baja)
+router.delete('/:id', [verifyToken, isAdmin], alumnos.delete);
+
+
+// ------------------------------------------------------------------
+// 🔓 ZONA DE CONSULTA (Docentes y Tutores)
+// ------------------------------------------------------------------
 
 // Obtener todos los alumnos
-router.get('/', alumnos.findAll);
+// El Docente necesita esto para ver su lista de asistencia.
+router.get('/', [verifyToken], alumnos.findAll);
 
 // Obtener un solo alumno por id
-router.get('/:id', alumnos.findOne);
-
-// Actualizar un alumno por id
-router.put('/:id', alumnos.update);
-
-// Eliminar un alumno por id
-router.delete('/:id', alumnos.delete);
+// El Tutor usa esto para ver el perfil específico de su hijo.
+router.get('/:id', [verifyToken], alumnos.findOne);
 
 module.exports = router;

@@ -1,25 +1,25 @@
 const express = require('express');
 const router = express.Router();
+const controller = require('../controllers/alumnoMateriaController'); // Verifica el nombre del archivo
+const { verifyToken, isAdmin, isDocenteOrAdmin } = require('../middleware/authJwt');
 
-// Importamos el controlador que acabamos de hacer
-const controller = require('../controllers/alumnoMateriaController');
+router.use((req, res, next) => {
+  res.header("Access-Control-Allow-Headers", "x-access-token, Origin, Content-Type, Accept");
+  next();
+});
 
-// --- Definición de Rutas ---
+// Admin inscribe (asigna materia al alumno)
+router.post('/', [verifyToken, isAdmin], controller.inscribir);
 
-// 1. Inscribir (POST /api/alumnomateria)
-router.post('/', controller.inscribir);
+// Admin da de baja
+router.delete('/:id_alumno/:id_materia', [verifyToken, isAdmin], controller.darBaja);
 
-// 2. Ver materias de un alumno (GET /api/alumnomateria/alumno/:id_alumno)
-router.get('/alumno/:id_alumno', controller.verMateriasDeAlumno);
+//DOCENTE (y Admin) califica
+router.put('/:id_alumno/:id_materia',[verifyToken,isDocenteOrAdmin],controller.calificar);
 
-// 3. Ver alumnos de una materia (GET /api/alumnomateria/materia/:id_materia)
-router.get('/materia/:id_materia', controller.verAlumnosEnMateria);
-
-// 4. Calificar (PUT /api/alumnomateria/:id_alumno/:id_materia)
-// OJO: Necesita los dos IDs en la URL para saber a quién calificar en qué materia
-router.put('/:id_alumno/:id_materia', controller.calificar);
-
-// 5. Dar de baja (DELETE /api/alumnomateria/:id_alumno/:id_materia)
-router.delete('/:id_alumno/:id_materia', controller.darBaja);
+//BOLETA: TODOS los usuarios autenticados pueden verla
+router.get('/alumno/:id_alumno', [verifyToken], controller.verMateriasDeAlumno);
+//LISTA DE ALUMNOS EN MATERIA: SOLO ADMIN Y DOCENTE
+router.get('/materia/:id_materia',[verifyToken,isDocenteOrAdmin],controller.verAlumnosEnMateria);
 
 module.exports = router;
