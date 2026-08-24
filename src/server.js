@@ -14,8 +14,9 @@ app.use(helmet());
 const origenesPermitidos = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
-  //'https://alerta-temprana-g0kp.onrender.com'
-];
+  'https://sigejob-client.vercel.app',
+  process.env.CLIENT_URL // Permite dinámicamente la URL configurada en Render
+].filter(Boolean); // filter(Boolean) evita errores si CLIENT_URL no está definida
 
 app.use(cors({
   origin: function (origin, callback) {
