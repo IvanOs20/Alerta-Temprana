@@ -3,17 +3,12 @@ const nodemailer = require("nodemailer");
 // 🌐 Base URL dinámica: Usa CLIENT_URL en producción o localhost en desarrollo
 const FRONTEND_URL = process.env.CLIENT_URL || "http://localhost:5173";
 
-// 1. Configuración del transporte con POOL de conexiones
+// 1. Configuración del transporte optimizada para Gmail en la nube
 const transporter = nodemailer.createTransport({
-  pool: true,             // Mantiene conexiones TCP activas y evita reconexiones lentas[cite: 5]
-  maxConnections: 5,      // Hasta 5 conexiones simultáneas
-  maxMessages: 100,       // Reutiliza la conexión hasta 100 envíos
-  host: process.env.MAIL_HOST || "smtp.gmail.com",
-  port: Number(process.env.MAIL_PORT) || 465,
-  secure: true, 
+  service: "gmail",
   auth: {
-    user: process.env.MAIL_USER, 
-    pass: process.env.MAIL_PASS, 
+    user: process.env.MAIL_USER || process.env.EMAIL_USER, 
+    pass: process.env.MAIL_PASS || process.env.EMAIL_PASS, 
   },
   tls: {
     rejectUnauthorized: false
@@ -27,7 +22,7 @@ const enviarCorreoActivacion = async (emailDestino, nombre, token) => {
     console.log("🔗 URL DE ACTIVACIÓN:", urlActivacion);
 
     await transporter.sendMail({
-      from: `"Sistema Escolar 🏫" <${process.env.MAIL_USER || 'sistema.josefaortiz@gmail.com'}>`,
+      from: `"Sistema Escolar 🏫" <${process.env.MAIL_USER || process.env.EMAIL_USER || 'sistema.josefaortiz@gmail.com'}>`,
       to: emailDestino,
       subject: "Active su cuenta - Sistema Escolar",
       html: `
@@ -58,7 +53,7 @@ const enviarCorreoRecuperacion = async (emailDestino, nombre, token) => {
     console.log("🔗 URL DE RECUPERACIÓN:", urlRecuperacion);
 
     await transporter.sendMail({
-      from: `"Sistema Escolar 🏫" <${process.env.MAIL_USER || 'sistema.josefaortiz@gmail.com'}>`,
+      from: `"Sistema Escolar 🏫" <${process.env.MAIL_USER || process.env.EMAIL_USER || 'sistema.josefaortiz@gmail.com'}>`,
       to: emailDestino,
       subject: "Restablecer Contraseña 🔐",
       html: `
