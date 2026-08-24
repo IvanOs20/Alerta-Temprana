@@ -1,47 +1,90 @@
 const nodemailer = require("nodemailer");
 
-// 1. Configuración del transporte (Tus credenciales reales)
+// 🌐 Base URL dinámica: Usa CLIENT_URL en producción o localhost en desarrollo
+const FRONTEND_URL = process.env.CLIENT_URL || "http://localhost:5173";
+
+// 1. Configuración del transporte con POOL de conexiones
 const transporter = nodemailer.createTransport({
-  host: process.env.MAIL_HOST,
-  port: process.env.MAIL_PORT,
+  pool: true,             // Mantiene conexiones TCP activas y evita reconexiones lentas[cite: 5]
+  maxConnections: 5,      // Hasta 5 conexiones simultáneas
+  maxMessages: 100,       // Reutiliza la conexión hasta 100 envíos
+  host: process.env.MAIL_HOST || "smtp.gmail.com",
+  port: Number(process.env.MAIL_PORT) || 465,
   secure: true, 
   auth: {
     user: process.env.MAIL_USER, 
     pass: process.env.MAIL_PASS, 
   },
+  tls: {
+    rejectUnauthorized: false
+  }
 });
 
-// 2. Función para enviar el correo de activación
+// 2. ACTIVACIÓN (Cuenta nueva)
 const enviarCorreoActivacion = async (emailDestino, nombre, token) => {
   try {
-    // URL del Frontend donde el usuario pondrá su contraseña nueva
-    const urlActivacion = `http://192.168.59.187:5173/activar-cuenta?token=${token}`;
+    const urlActivacion = `${FRONTEND_URL}/activar-cuenta?token=${token}`; 
+    console.log("🔗 URL DE ACTIVACIÓN:", urlActivacion);
 
-    const info = await transporter.sendMail({
-      from: '"Sistema Escolar 🏫" <tu_correo_real@gmail.com>',
+    await transporter.sendMail({
+      from: `"Sistema Escolar 🏫" <${process.env.MAIL_USER || 'sistema.josefaortiz@gmail.com'}>`,
       to: emailDestino,
       subject: "Active su cuenta - Sistema Escolar",
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2c3e50;">¡Bienvenido al Sistema Escolar, ${nombre}!</h2>
-          <p>Se ha creado un perfil para usted. Para acceder, es necesario que active su cuenta y defina su contraseña personal.</p>
-          
-          <div style="background-color: #f9f9f9; padding: 20px; border-radius: 5px; text-align: center; margin: 20px 0;">
-            <p style="margin-bottom: 15px;">Haga clic en el siguiente botón para activar:</p>
-            <a href="${urlActivacion}" style="background-color: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Activar Cuenta y Crear Contraseña</a>
-          </div>
-
-          <p style="font-size: 12px; color: #7f8c8d;">Si el botón no funciona, copie y pegue este enlace: <br> ${urlActivacion}</p>
-          <p>Este enlace expirará en 24 horas por seguridad.</p>
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h3>Bienvenido ${nombre}</h3>
+          <p>Haga clic en el botón de abajo para activar su cuenta:</p>
+          <a href="${urlActivacion}" style="background-color: #28a745; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px;">Activar Cuenta</a>
+          <br><br>
+          <p style="color: #666; font-size: 14px;">Si el botón no funciona, copia y pega este enlace completo en tu navegador:</p>
+          <p style="background-color: #f4f4f4; padding: 10px; word-break: break-all;">
+            <strong>${urlActivacion}</strong>
+          </p>
         </div>
       `,
     });
-    console.log("Correo de activación enviado: %s", info.messageId);
+    console.log("✅ Correo de activación enviado a:", emailDestino);
     return true;
   } catch (error) {
-    console.error("Error enviando correo: ", error);
+    console.error("❌ Error enviando activación:", error);
     return false;
   }
 };
 
-module.exports = { transporter, enviarCorreoActivacion };
+// 3. RECUPERACIÓN (Olvido Password)
+const enviarCorreoRecuperacion = async (emailDestino, nombre, token) => {
+  try {
+    const urlRecuperacion = `${FRONTEND_URL}/reset-password/${token}`; 
+    console.log("🔗 URL DE RECUPERACIÓN:", urlRecuperacion);
+
+    await transporter.sendMail({
+      from: `"Sistema Escolar 🏫" <${process.env.MAIL_USER || 'sistema.josefaortiz@gmail.com'}>`,
+      to: emailDestino,
+      subject: "Restablecer Contraseña 🔐",
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h3 style="color: #d9534f;">Recuperación de Acceso</h3>
+          <p>Hola ${nombre}, solicitaste restablecer tu contraseña.</p>
+          <p>Haz clic en el siguiente enlace para continuar:</p>
+          <a href="${urlRecuperacion}" style="background-color: #007bff; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px;">Restablecer Contraseña</a>
+          <br><br>
+          <p style="color: #666; font-size: 14px;">Si el botón no funciona, copia y pega este enlace completo en tu navegador:</p>
+          <p style="background-color: #f4f4f4; padding: 10px; word-break: break-all;">
+            <strong>${urlRecuperacion}</strong>
+          </p>
+        </div>
+      `,
+    });
+    console.log("✅ Correo de recuperación enviado a:", emailDestino);
+    return true;
+  } catch (error) {
+    console.error("❌ Error enviando recuperación:", error);
+    return false;
+  }
+};
+
+module.exports = { 
+  transporter, 
+  enviarCorreoActivacion,
+  enviarCorreoRecuperacion 
+};

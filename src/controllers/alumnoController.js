@@ -1,4 +1,4 @@
-const db = require('../models') // Asegúrate de que esta ruta apunte a tu carpeta models del root
+const db = require('../models'); // Asegúrate de que esta ruta apunte a tu carpeta models del root
 const Alumno = db.tb_alumnos;
 const Grupo = db.tb_grupos;
 const Tutor = db.tb_tutores;
@@ -32,16 +32,45 @@ exports.create = async (req, res) => {
   }
 };
 
-// 2. OBTENER TODOS los alumnos
+// 2. OBTENER TODOS los alumnos (Blindado para Admin, Docente y Tutor)
 exports.findAll = async (req, res) => {
+  const rol = (req.rol || req.userRol || '').toLowerCase();
+  const idPerfil = req.id_perfil || req.idPerfil;
+
   try {
+    let condicionWhere = {};
+
+    // CASO 1: Si es DOCENTE -> Traer solo los alumnos de su grupo
+    if (rol === 'docente') {
+      const grupoDocente = await Grupo.findOne({
+        where: { id_docente: idPerfil }
+      });
+
+      if (grupoDocente) {
+        condicionWhere.id_grupo = grupoDocente.id_grupo;
+      } else {
+        return res.send([]); // Docente sin grupo asignado
+      }
+    }
+
+    // CASO 2: Si es TUTOR -> Traer únicamente a sus hijos
+    else if (rol === 'tutor') {
+      if (!idPerfil) {
+        return res.status(403).send({ message: "No se identificó el ID del tutor." });
+      }
+      condicionWhere.id_tutor = Number(idPerfil);
+    }
+
+    // CASO 3: Si es ADMIN -> condicionWhere se queda vacío {} y trae a todos
+
     const data = await Alumno.findAll({
-      // Opcional: Incluir datos de las tablas relacionadas (JOINs)
+      where: condicionWhere,
       include: [
-        { model: Grupo }, // Para ver info del grupo
-        { model: Tutor }  // Para ver info del tutor
+        { model: Grupo },
+        { model: Tutor }
       ]
     });
+
     res.send(data);
   } catch (error) {
     res.status(500).send({

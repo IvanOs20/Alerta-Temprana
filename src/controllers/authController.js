@@ -2,7 +2,10 @@ const db = require('../models');
 const Usuario = db.tb_usuarios;
 const Docente = db.tb_docentes;
 const Tutor = db.tb_tutores;
-const Alumno = db.tb_alumnos; // <--- Importante para buscar los hijos
+const Alumno = db.tb_alumnos; 
+const crypto = require("crypto"); 
+const { Op } = require("sequelize"); 
+const mailer = require("../config/mailer.js");
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -27,15 +30,15 @@ exports.activarCuenta = async (req, res) => {
       });
     }
 
-    // B. Encriptar la nueva contraseña que eligió el usuario
+    // B. Encriptar la nueva contraseña
     const hashedPassword = await bcrypt.hash(nuevaPassword, 10);
 
-    // C. Actualizar el usuario: Poner password, activar cuenta y borrar token
+    // C. Actualizar el usuario
     await Usuario.update(
       { 
         password: hashedPassword,
         cuenta_activa: true,
-        token_activacion: null // Borramos el token para que no se use dos veces
+        token_activacion: null 
       },
       { where: { id_usuario: usuario.id_usuario } }
     );
@@ -61,7 +64,7 @@ exports.login = async (req, res) => {
       return res.status(404).send({ message: "Usuario no encontrado." });
     }
 
-    // B. Verificar si la cuenta está activa (Seguridad Extra)
+    // B. Verificar si la cuenta está activa
     if (!usuario.cuenta_activa) {
       return res.status(403).send({ 
         message: "Esta cuenta aún no ha sido activada. Revise su correo electrónico." 
@@ -76,25 +79,21 @@ exports.login = async (req, res) => {
 
     // D. BUSCAR DATOS DE PERFIL
     let idPerfil = null; 
-    // Inicializamos en NULL para diferenciar si buscamos o no
     let hijosEncontrados = null; 
 
     if (usuario.rol === 'docente') {
       const docente = await Docente.findOne({ where: { email: email } });
       if (docente) idPerfil = docente.id_docente;
-      // Aquí NO buscamos hijos, así que la variable sigue siendo null
     } 
     else if (usuario.rol === 'tutor') {
       const tutor = await Tutor.findOne({ where: { email: email } });
       
       if (tutor) {
         idPerfil = tutor.id_tutor;
-        
-        // --- AQUÍ ESTÁ LA LÓGICA DE HIJOS ---
-        // Buscamos automáticamente a todos los hijos de este tutor
+        // Buscar hijos
         hijosEncontrados = await Alumno.findAll({
           where: { id_tutor: idPerfil },
-          attributes: ['id_alumno', 'nombre', 'apellidos'] // Solo traemos lo necesario
+          attributes: ['id_alumno', 'nombre', 'apellidos'] 
         });
       }
     }
@@ -110,8 +109,7 @@ exports.login = async (req, res) => {
       { expiresIn: 86400 } // 24 horas
     );
 
-    // F. CONSTRUIR RESPUESTA DINÁMICA
-    // Creamos el objeto base que siempre se envía
+    // F. CONSTRUIR RESPUESTA
     const dataResponse = {
       id_usuario: usuario.id_usuario,
       nombre: usuario.nombre_completo,
@@ -121,14 +119,81 @@ exports.login = async (req, res) => {
       accessToken: token
     };
 
-    // Solo si es tutor (hijosEncontrados no es null), agregamos el campo al JSON
     if (hijosEncontrados !== null) {
       dataResponse.hijos = hijosEncontrados;
     }
 
-    // Enviamos el paquete
     res.status(200).send(dataResponse);
 
+  } catch (error) {
+    res.status(500).send({ message: error.message });
+  }
+};
+
+// -------------------------------------------------------------------------
+// 3. SOLICITAR CAMBIO (Forgot Password - OPTIMIZADO ASÍNCRONO)
+// -------------------------------------------------------------------------
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await Usuario.findOne({ where: { email: email } }); 
+
+    if (!user) {
+      return res.status(404).send({ message: "Usuario no encontrado." });
+    }
+
+    // Generar token
+    const token = crypto.randomBytes(20).toString('hex');
+
+    // Guardar en BD
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hora
+    await user.save();
+
+    // A. Responder inmediatamente al cliente (< 50ms)
+    res.send({ message: "Correo enviado. Revisa tu bandeja." });
+
+    // B. Despachar el correo en segundo plano sin bloquear la respuesta
+    mailer.enviarCorreoRecuperacion(
+      user.email, 
+      user.nombre_completo || "Usuario", 
+      token
+    ).catch((mailErr) => {
+      console.error("⚠️ Error al enviar correo de recuperación en segundo plano:", mailErr);
+    });
+
+  } catch (error) {
+    res.status(500).send({ message: error.message });
+  }
+};
+
+// -------------------------------------------------------------------------
+// 4. GUARDAR NUEVA CONTRASEÑA (Reset Password)
+// -------------------------------------------------------------------------
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    // Buscar usuario con token válido y fecha vigente
+    const user = await Usuario.findOne({
+      where: {
+        resetPasswordToken: token,
+        resetPasswordExpires: { [Op.gt]: Date.now() }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).send({ message: "Token inválido o expirado." });
+    }
+
+    // Encriptar y guardar
+    user.password = bcrypt.hashSync(newPassword, 8); 
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    
+    await user.save();
+
+    res.send({ message: "Contraseña actualizada con éxito." });
   } catch (error) {
     res.status(500).send({ message: error.message });
   }

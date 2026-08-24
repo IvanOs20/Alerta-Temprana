@@ -1,12 +1,12 @@
 const db = require('../models');
 const Tutor = db.tb_tutores;
 const Alumno = db.tb_alumnos;
-const Usuario = db.tb_usuarios; // Necesario para la cuenta de acceso
-const crypto = require('crypto'); // Para el token
-const bcrypt = require('bcryptjs'); // Para la contraseña temporal
-const { enviarCorreoActivacion } = require('../config/mailer'); // El cartero
+const Usuario = db.tb_usuarios;
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+const { enviarCorreoActivacion } = require('../config/mailer');
 
-// 1. CREAR TUTOR Y DISPARAR CORREO DE ACTIVACIÓN (MODIFICADO)
+// 1. CREAR TUTOR Y DISPARAR CORREO DE ACTIVACIÓN (OPTIMIZADO)
 exports.create = async (req, res) => {
   try {
     const { nombre, apellidos, email, telefono } = req.body;
@@ -20,38 +20,42 @@ exports.create = async (req, res) => {
 
     // A. Crear el Tutor en la tabla de negocio
     const nuevoTutor = await Tutor.create({
-      nombre: nombre,
-      apellidos: apellidos,
-      email: email,
-      telefono: telefono // Opcional
+      nombre: nombre.trim(),
+      apellidos: apellidos.trim(),
+      email: email.trim().toLowerCase(),
+      telefono: telefono ? telefono.trim() : null
     });
 
     // B. Generar Token de Activación
     const token = crypto.randomBytes(32).toString('hex');
 
-    // C. Generar contraseña temporal encriptada (relleno)
+    // C. Generar contraseña temporal encriptada
     const dummyPassword = await bcrypt.hash("PENDIENTE_" + Date.now(), 10);
 
-    // D. Crear el Usuario INACTIVO en tb_usuarios
+    // D. Crear el Usuario INACTIVO vinculado con su id_perfil
     await Usuario.create({
-      nombre_completo: `${nombre} ${apellidos}`,
-      email: email, // El mismo email sirve de enlace
+      nombre_completo: `${nombre.trim()} ${apellidos.trim()}`,
+      email: email.trim().toLowerCase(),
       password: dummyPassword,
-      rol: 'tutor', // Rol específico para padres
+      rol: 'tutor',
+      id_perfil: nuevoTutor.id_tutor, // 👈 Enlace indispensable para JWT y sesión
       token_activacion: token,
-      cuenta_activa: false // Nace desactivada
+      cuenta_activa: false
     });
 
-    // E. Enviar el correo con el link
-    await enviarCorreoActivacion(email, `${nombre} ${apellidos}`, token);
-
+    // E. Responder inmediatamente al cliente (< 50ms)
     res.status(201).send({
       message: "Tutor registrado exitosamente. Se ha enviado el correo de activación.",
       tutor: nuevoTutor
     });
 
+    // F. Despachar el correo en segundo plano sin bloquear la respuesta HTTP
+    enviarCorreoActivacion(email, `${nombre} ${apellidos}`, token).catch((mailErr) => {
+      console.error("⚠️ Error al enviar correo de activación en segundo plano:", mailErr);
+    });
+
   } catch (error) {
-    console.error(error); // Ver errores en consola si falla el correo
+    console.error("❌ Error al crear el tutor:", error);
     res.status(500).send({
       message: error.message || "Error al crear el tutor."
     });

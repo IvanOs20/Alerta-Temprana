@@ -1,11 +1,12 @@
 const db = require('../models');
 const Docente = db.tb_docentes;
-const Usuario = db.tb_usuarios; // Necesario para crear la cuenta de acceso
-const crypto = require('crypto'); // Para generar el token aleatorio
-const bcrypt = require('bcryptjs'); // Para la contraseña temporal
-const { enviarCorreoActivacion } = require('../config/mailer'); // El cartero
+const Grupo = db.tb_grupos; // 👈 1. Importación del modelo de grupos
+const Usuario = db.tb_usuarios;
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+const { enviarCorreoActivacion } = require('../config/mailer');
 
-// 1. CREAR DOCENTE Y DISPARAR CORREO DE ACTIVACIÓN (MODIFICADO)
+// 1. CREAR DOCENTE Y DISPARAR CORREO DE ACTIVACIÓN (OPTIMIZADO)
 exports.create = async (req, res) => {
   try {
     const { nombre, apellidos, email } = req.body;
@@ -19,48 +20,59 @@ exports.create = async (req, res) => {
 
     // A. Crear el Docente en la tabla de negocio
     const nuevoDocente = await Docente.create({
-      nombre: nombre,
-      apellidos: apellidos,
-      email: email
+      nombre: nombre.trim(),
+      apellidos: apellidos.trim(),
+      email: email.trim().toLowerCase()
     });
 
     // B. Generar Token de Activación (32 bytes en hex)
     const token = crypto.randomBytes(32).toString('hex');
 
-    // C. Generar contraseña temporal encriptada (nadie la usará, es relleno)
+    // C. Generar contraseña temporal encriptada (relleno de seguridad)
     const dummyPassword = await bcrypt.hash("PENDIENTE_" + Date.now(), 10);
 
-    // D. Crear el Usuario INACTIVO en tb_usuarios
+    // D. Crear el Usuario INACTIVO vinculado con su id_perfil
     await Usuario.create({
-      nombre_completo: `${nombre} ${apellidos}`,
-      email: email, // El mismo email sirve de enlace
+      nombre_completo: `${nombre.trim()} ${apellidos.trim()}`,
+      email: email.trim().toLowerCase(),
       password: dummyPassword,
       rol: 'docente',
+      id_perfil: nuevoDocente.id_docente, // 👈 Enlace directo fundamental para el JWT
       token_activacion: token,
-      cuenta_activa: false // Importante: Nace desactivada
+      cuenta_activa: false
     });
 
-    // E. Enviar el correo con el link
-    // Nota: Usamos await para asegurar que si falla el correo, nos enteremos en el log
-    await enviarCorreoActivacion(email, `${nombre} ${apellidos}`, token);
-
+    // E. Responder inmediatamente al cliente (< 50ms)
     res.status(201).send({
       message: "Docente registrado exitosamente. Se ha enviado el correo de activación.",
       docente: nuevoDocente
     });
 
+    // F. Despachar el correo en segundo plano sin bloquear la respuesta HTTP
+    enviarCorreoActivacion(email, `${nombre} ${apellidos}`, token).catch((mailErr) => {
+      console.error("⚠️ Error al enviar correo de activación en segundo plano:", mailErr);
+    });
+
   } catch (error) {
-    console.error(error); // Para ver el error en consola si falla el correo
+    console.error("❌ Error al crear el docente:", error);
     res.status(500).send({
       message: error.message || "Error al crear el docente."
     });
   }
 };
 
-// 2. OBTENER TODOS los docentes (SIN CAMBIOS)
+// 2. OBTENER TODOS los docentes (CON SU GRUPO INCLUIDO)
 exports.findAll = async (req, res) => {
   try {
-    const data = await Docente.findAll();
+    const data = await Docente.findAll({
+      include: [
+        {
+          model: Grupo,
+          attributes: ['id_grupo', 'grado', 'grupo'] // 👈 2. Cruce automático con el salón
+        }
+      ],
+      order: [['nombre', 'ASC']]
+    });
     res.send(data);
   } catch (error) {
     res.status(500).send({
@@ -69,12 +81,19 @@ exports.findAll = async (req, res) => {
   }
 };
 
-// 3. OBTENER UNO por id (SIN CAMBIOS)
+// 3. OBTENER UNO por id
 exports.findOne = async (req, res) => {
   const id = req.params.id;
 
   try {
-    const data = await Docente.findByPk(id);
+    const data = await Docente.findByPk(id, {
+      include: [
+        {
+          model: Grupo,
+          attributes: ['id_grupo', 'grado', 'grupo']
+        }
+      ]
+    });
 
     if (data) {
       res.send(data);
@@ -90,7 +109,7 @@ exports.findOne = async (req, res) => {
   }
 };
 
-// 4. ACTUALIZAR un docente (SIN CAMBIOS)
+// 4. ACTUALIZAR un docente
 exports.update = async (req, res) => {
   const id = req.params.id;
 
@@ -100,7 +119,6 @@ exports.update = async (req, res) => {
     });
 
     if (num == 1) {
-      // Opcional: Podrías agregar lógica aquí para actualizar también el email en tb_usuarios si cambia
       res.send({ message: "Docente actualizado correctamente." });
     } else {
       res.send({ message: `No se pudo actualizar. Tal vez el id=${id} no existe.` });
@@ -112,7 +130,7 @@ exports.update = async (req, res) => {
   }
 };
 
-// 5. ELIMINAR un docente (SIN CAMBIOS)
+// 5. ELIMINAR un docente
 exports.delete = async (req, res) => {
   const id = req.params.id;
 
@@ -122,8 +140,6 @@ exports.delete = async (req, res) => {
     });
 
     if (num == 1) {
-      // Nota: Si borras al docente, deberías considerar borrar también al usuario asociado manualmente
-      // o dejarlo. Por ahora lo dejamos simple.
       res.send({ message: "Docente eliminado correctamente." });
     } else {
       res.send({ message: `No se pudo eliminar. Tal vez el id=${id} no existe.` });

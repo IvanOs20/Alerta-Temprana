@@ -1,6 +1,7 @@
-const db = require('../models')
+const db = require('../models');
 const Grupo = db.tb_grupos;
 const Docente = db.tb_docentes;
+const { Op } = db.Sequelize;
 
 // 1. CREAR un grupo
 exports.create = async (req, res) => {
@@ -9,6 +10,17 @@ exports.create = async (req, res) => {
     if (!req.body.id_docente || !req.body.grado || !req.body.grupo) {
       return res.status(400).send({
         message: "Faltan campos: id_docente, grado o grupo son obligatorios."
+      });
+    }
+
+    // Validar si el docente ya tiene un grupo asignado
+    const docenteOcupado = await Grupo.findOne({
+      where: { id_docente: Number(req.body.id_docente) }
+    });
+
+    if (docenteOcupado) {
+      return res.status(400).send({
+        message: `El docente seleccionado ya es titular del grupo ${docenteOcupado.grado} "${docenteOcupado.grupo}".`
       });
     }
 
@@ -73,6 +85,22 @@ exports.update = async (req, res) => {
   const id = req.params.id;
 
   try {
+    // Si se envía id_docente, validar que no pertenezca a OTRO grupo
+    if (req.body.id_docente) {
+      const docenteOcupado = await Grupo.findOne({
+        where: {
+          id_docente: Number(req.body.id_docente),
+          id_grupo: { [Op.ne]: id } // Excluye el grupo actual que se está modificando
+        }
+      });
+
+      if (docenteOcupado) {
+        return res.status(400).send({
+          message: `El docente ya está a cargo del grupo ${docenteOcupado.grado} "${docenteOcupado.grupo}".`
+        });
+      }
+    }
+
     const [num] = await Grupo.update(req.body, {
       where: { id_grupo: id }
     });

@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false
     },
-    rol: { 
+    rol: {
       type: DataTypes.STRING, // 'admin', 'docente', 'tutor'
       allowNull: false
     },
@@ -34,7 +34,16 @@ module.exports = (sequelize, DataTypes) => {
     cuenta_activa: {
       type: DataTypes.BOOLEAN,
       defaultValue: false // Nace desactivada hasta que den clic al correo
+    },
+    resetPasswordToken: {
+      type: DataTypes.STRING,
+      allowNull: true // Estará vacío hasta que el usuario pida resetear
+    },
+    resetPasswordExpires: {
+      type: DataTypes.DATE, // Guarda fecha y hora exacta
+      allowNull: true
     }
+
   }, {
     tableName: 'tb_usuarios',
     timestamps: false

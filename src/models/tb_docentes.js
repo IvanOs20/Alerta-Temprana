@@ -26,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   tb_docentes.associate = function(models) {
-    tb_docentes.hasMany(models.tb_grupos, {
+    tb_docentes.hasOne(models.tb_grupos, {
       foreignKey: 'id_docente',
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE'

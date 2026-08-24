@@ -6,8 +6,11 @@ const Alumno = db.tb_alumnos;
 // 1. CREAR una notificación
 exports.create = async (req, res) => {
   try {
+    // Tomar id_docente del token JWT (req.id_perfil) o del body como respaldo
+    const id_docente = req.id_perfil || req.idPerfil || req.body.id_docente;
+
     // Validar campos obligatorios básicos
-    if (!req.body.id_docente || !req.body.id_alumno || !req.body.mensaje) {
+    if (!id_docente || !req.body.id_alumno || !req.body.mensaje) {
       return res.status(400).send({
         message: "Faltan datos: id_docente, id_alumno y mensaje son requeridos."
       });
@@ -15,17 +18,15 @@ exports.create = async (req, res) => {
 
     // Calcular Fecha y Hora actuales automáticamente
     const now = new Date();
-    // Formato YYYY-MM-DD para DATEONLY
-    const fechaActual = now.toISOString().split('T')[0]; 
-    // Formato HH:MM:SS para TIME
-    const horaActual = now.toTimeString().split(' ')[0];
+    const fechaActual = now.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    const horaActual = now.toTimeString().split(' ')[0];   // Formato HH:MM:SS
 
     const notificacionData = {
-      id_docente: req.body.id_docente,
+      id_docente: Number(id_docente),
       id_alumno: req.body.id_alumno,
       mensaje: req.body.mensaje,
-      fecha_envio: fechaActual, // Se llena automático
-      hora_envio: horaActual    // Se llena automático
+      fecha_envio: fechaActual,
+      hora_envio: horaActual
     };
 
     const data = await Notificacion.create(notificacionData);
@@ -38,20 +39,35 @@ exports.create = async (req, res) => {
   }
 };
 
-// 2. OBTENER TODAS las notificaciones (Para Admin)
+// 2. OBTENER TODAS las notificaciones (Filtrado seguro por Docente)
 exports.findAll = async (req, res) => {
+  const rol = (req.rol || req.userRol || '').toLowerCase();
+  const idDocente = req.id_perfil || req.idPerfil;
+
   try {
+    let condicionWhere = {};
+
+    // Filtrar por id_docente ÚNICAMENTE si quien consulta es un Docente
+    if (rol === 'docente') {
+      if (idDocente) {
+        condicionWhere.id_docente = Number(idDocente);
+      }
+    }
+
     const data = await Notificacion.findAll({
+      where: condicionWhere,
       include: [
-        { model: Docente, attributes: ['nombre', 'apellidos'] }, // Ver quién la envió
-        { model: Alumno, attributes: ['nombre', 'apellidos'] }   // Ver a quién se envió
+        { model: Docente, attributes: ['nombre', 'apellidos'] },
+        { model: Alumno, attributes: ['nombre', 'apellidos'] }
       ],
-      order: [['fecha_envio', 'DESC'], ['hora_envio', 'DESC']] // Las más recientes primero
+      order: [['fecha_envio', 'DESC'], ['hora_envio', 'DESC']]
     });
+
     res.send(data);
   } catch (error) {
     res.status(500).send({
-      message: "Error al obtener las notificaciones."
+      message: "Error al obtener las notificaciones.",
+      error: error.message
     });
   }
 };
@@ -64,7 +80,8 @@ exports.findByAlumno = async (req, res) => {
     const data = await Notificacion.findAll({
       where: { id_alumno: id_alumno },
       include: [
-        { model: Docente, attributes: ['nombre', 'apellidos'] } // Para que el alumno sepa qué profe le escribió
+        { model: Docente, attributes: ['nombre', 'apellidos'] },
+        { model: Alumno, attributes: ['nombre', 'apellidos'] } // ✅ Agregado 
       ],
       order: [['fecha_envio', 'DESC'], ['hora_envio', 'DESC']]
     });
