@@ -18,11 +18,21 @@ exports.create = async (req, res) => {
       });
     }
 
+    const emailNormalizado = email.trim().toLowerCase();
+
+    // Validar si el correo ya existe en usuarios para evitar inconsistencias
+    const usuarioExistente = await Usuario.findOne({ where: { email: emailNormalizado } });
+    if (usuarioExistente) {
+      return res.status(400).send({
+        message: "El correo electrónico ya está registrado en el sistema."
+      });
+    }
+
     // A. Crear el Tutor en la tabla de negocio
     const nuevoTutor = await Tutor.create({
       nombre: nombre.trim(),
       apellidos: apellidos.trim(),
-      email: email.trim().toLowerCase(),
+      email: emailNormalizado,
       telefono: telefono ? telefono.trim() : null
     });
 
@@ -32,26 +42,24 @@ exports.create = async (req, res) => {
     // C. Generar contraseña temporal encriptada
     const dummyPassword = await bcrypt.hash("PENDIENTE_" + Date.now(), 10);
 
-    // D. Crear el Usuario INACTIVO vinculado con su id_perfil
+    // D. Crear el Usuario INACTIVO vinculado
     await Usuario.create({
       nombre_completo: `${nombre.trim()} ${apellidos.trim()}`,
-      email: email.trim().toLowerCase(),
+      email: emailNormalizado,
       password: dummyPassword,
       rol: 'tutor',
-      id_perfil: nuevoTutor.id_tutor, // 👈 Enlace indispensable para JWT y sesión
+      id_perfil: nuevoTutor.id_tutor,
       token_activacion: token,
       cuenta_activa: false
     });
 
-    // E. Responder inmediatamente al cliente (< 50ms)
+    // E. Esperar el envío del correo antes de cerrar la petición HTTP (evita congelamiento en Render)
+    await enviarCorreoActivacion(emailNormalizado, `${nombre.trim()} ${apellidos.trim()}`, token);
+
+    // F. Responder al cliente
     res.status(201).send({
       message: "Tutor registrado exitosamente. Se ha enviado el correo de activación.",
       tutor: nuevoTutor
-    });
-
-    // F. Despachar el correo en segundo plano sin bloquear la respuesta HTTP
-    enviarCorreoActivacion(email, `${nombre} ${apellidos}`, token).catch((mailErr) => {
-      console.error("⚠️ Error al enviar correo de activación en segundo plano:", mailErr);
     });
 
   } catch (error) {
@@ -120,20 +128,30 @@ exports.update = async (req, res) => {
   }
 };
 
-// 5. ELIMINAR un tutor (SIN CAMBIOS)
+// 5. ELIMINAR un tutor (Sincronizado con tb_usuarios)
 exports.delete = async (req, res) => {
   const id = req.params.id;
 
   try {
-    const num = await Tutor.destroy({
-      where: { id_tutor: id }
-    });
+    const tutor = await Tutor.findByPk(id);
 
-    if (num == 1) {
-      res.send({ message: "Tutor eliminado correctamente." });
-    } else {
-      res.send({ message: `No se pudo eliminar el tutor con id=${id}.` });
+    if (!tutor) {
+      return res.status(404).send({
+        message: `No se encontró el tutor con id=${id}.`
+      });
     }
+
+    const email = tutor.email;
+
+    // Eliminar de tb_tutores
+    await Tutor.destroy({ where: { id_tutor: id } });
+
+    // Eliminar también de tb_usuarios para liberar el correo
+    if (email) {
+      await Usuario.destroy({ where: { email } });
+    }
+
+    res.send({ message: "Tutor y usuario eliminados correctamente." });
   } catch (error) {
     res.status(500).send({
       message: "Error al eliminar el tutor con id=" + id

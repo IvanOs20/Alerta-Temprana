@@ -5,23 +5,38 @@ const FRONTEND_URL = process.env.CLIENT_URL || "http://localhost:5173";
 
 // 1. Configuración del transporte optimizada para Gmail en la nube
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.MAIL_USER || process.env.EMAIL_USER, 
     pass: process.env.MAIL_PASS || process.env.EMAIL_PASS, 
   },
   tls: {
     rejectUnauthorized: false
+  },
+  family: 4,               // ⚡ Forzar IPv4 para evitar bloqueos/hangs de red en Render
+  connectionTimeout: 10000, // 10s máximo para conectar
+  greetingTimeout: 10000,   // 10s máximo para handshake SMTP
+  socketTimeout: 15000      // 15s máximo de inactividad de socket
+});
+
+// 2. Verificar la conexión con el servidor SMTP al arrancar
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ Error de autenticación SMTP con Gmail:", error.message || error);
+  } else {
+    console.log("✅ Servidor SMTP listo: Conexión con Gmail verificada.");
   }
 });
 
-// 2. ACTIVACIÓN (Cuenta nueva)
+// 3. ACTIVACIÓN (Cuenta nueva)
 const enviarCorreoActivacion = async (emailDestino, nombre, token) => {
   try {
     const urlActivacion = `${FRONTEND_URL}/activar-cuenta?token=${token}`; 
     console.log("🔗 URL DE ACTIVACIÓN:", urlActivacion);
 
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: `"Sistema Escolar 🏫" <${process.env.MAIL_USER || process.env.EMAIL_USER || 'sistema.josefaortiz@gmail.com'}>`,
       to: emailDestino,
       subject: "Active su cuenta - Sistema Escolar",
@@ -38,21 +53,21 @@ const enviarCorreoActivacion = async (emailDestino, nombre, token) => {
         </div>
       `,
     });
-    console.log("✅ Correo de activación enviado a:", emailDestino);
+    console.log("✅ Correo de activación enviado a:", emailDestino, "| ID:", info.messageId);
     return true;
   } catch (error) {
-    console.error("❌ Error enviando activación:", error);
+    console.error("❌ Error enviando activación:", error.message || error);
     return false;
   }
 };
 
-// 3. RECUPERACIÓN (Olvido Password)
+// 4. RECUPERACIÓN (Olvido Password)
 const enviarCorreoRecuperacion = async (emailDestino, nombre, token) => {
   try {
     const urlRecuperacion = `${FRONTEND_URL}/reset-password/${token}`; 
     console.log("🔗 URL DE RECUPERACIÓN:", urlRecuperacion);
 
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: `"Sistema Escolar 🏫" <${process.env.MAIL_USER || process.env.EMAIL_USER || 'sistema.josefaortiz@gmail.com'}>`,
       to: emailDestino,
       subject: "Restablecer Contraseña 🔐",
@@ -70,10 +85,10 @@ const enviarCorreoRecuperacion = async (emailDestino, nombre, token) => {
         </div>
       `,
     });
-    console.log("✅ Correo de recuperación enviado a:", emailDestino);
+    console.log("✅ Correo de recuperación enviado a:", emailDestino, "| ID:", info.messageId);
     return true;
   } catch (error) {
-    console.error("❌ Error enviando recuperación:", error);
+    console.error("❌ Error enviando recuperación:", error.message || error);
     return false;
   }
 };

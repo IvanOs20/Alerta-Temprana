@@ -52,15 +52,13 @@ exports.create = async (req, res) => {
       cuenta_activa: false
     });
 
-    // E. Responder inmediatamente al cliente (< 50ms)
+    // E. Esperar el envío del correo antes de cerrar la petición HTTP (evita congelamiento en Render)
+    await enviarCorreoActivacion(emailNormalizado, `${nombre.trim()} ${apellidos.trim()}`, token);
+
+    // F. Responder al cliente
     res.status(201).send({
       message: "Docente registrado exitosamente. Se ha enviado el correo de activación.",
       docente: nuevoDocente
-    });
-
-    // F. Despachar el correo en segundo plano sin bloquear la respuesta HTTP
-    enviarCorreoActivacion(emailNormalizado, `${nombre.trim()} ${apellidos.trim()}`, token).catch((mailErr) => {
-      console.error("⚠️ Error al enviar correo de activación en segundo plano:", mailErr);
     });
 
   } catch (error) {
