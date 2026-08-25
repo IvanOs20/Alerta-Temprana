@@ -1,6 +1,6 @@
 const db = require('../models');
 const Docente = db.tb_docentes;
-const Grupo = db.tb_grupos; // 👈 1. Importación del modelo de grupos
+const Grupo = db.tb_grupos;
 const Usuario = db.tb_usuarios;
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
@@ -18,11 +18,21 @@ exports.create = async (req, res) => {
       });
     }
 
+    const emailNormalizado = email.trim().toLowerCase();
+
+    // Validar si el correo ya existe en usuarios para evitar errores 500 de duplicados
+    const usuarioExistente = await Usuario.findOne({ where: { email: emailNormalizado } });
+    if (usuarioExistente) {
+      return res.status(400).send({
+        message: "El correo electrónico ya está registrado en el sistema."
+      });
+    }
+
     // A. Crear el Docente en la tabla de negocio
     const nuevoDocente = await Docente.create({
       nombre: nombre.trim(),
       apellidos: apellidos.trim(),
-      email: email.trim().toLowerCase()
+      email: emailNormalizado
     });
 
     // B. Generar Token de Activación (32 bytes en hex)
@@ -34,10 +44,10 @@ exports.create = async (req, res) => {
     // D. Crear el Usuario INACTIVO vinculado con su id_perfil
     await Usuario.create({
       nombre_completo: `${nombre.trim()} ${apellidos.trim()}`,
-      email: email.trim().toLowerCase(),
+      email: emailNormalizado,
       password: dummyPassword,
       rol: 'docente',
-      id_perfil: nuevoDocente.id_docente, // 👈 Enlace directo fundamental para el JWT
+      id_perfil: nuevoDocente.id_docente,
       token_activacion: token,
       cuenta_activa: false
     });
@@ -49,7 +59,7 @@ exports.create = async (req, res) => {
     });
 
     // F. Despachar el correo en segundo plano sin bloquear la respuesta HTTP
-    enviarCorreoActivacion(email, `${nombre} ${apellidos}`, token).catch((mailErr) => {
+    enviarCorreoActivacion(emailNormalizado, `${nombre.trim()} ${apellidos.trim()}`, token).catch((mailErr) => {
       console.error("⚠️ Error al enviar correo de activación en segundo plano:", mailErr);
     });
 
@@ -68,7 +78,7 @@ exports.findAll = async (req, res) => {
       include: [
         {
           model: Grupo,
-          attributes: ['id_grupo', 'grado', 'grupo'] // 👈 2. Cruce automático con el salón
+          attributes: ['id_grupo', 'grado', 'grupo']
         }
       ],
       order: [['nombre', 'ASC']]
@@ -130,20 +140,34 @@ exports.update = async (req, res) => {
   }
 };
 
-// 5. ELIMINAR un docente
+// 5. ELIMINAR un docente (Sincronizado con tb_usuarios)
 exports.delete = async (req, res) => {
   const id = req.params.id;
 
   try {
-    const num = await Docente.destroy({
+    const docente = await Docente.findByPk(id);
+
+    if (!docente) {
+      return res.status(404).send({
+        message: `No se encontró el docente con id=${id}.`
+      });
+    }
+
+    const email = docente.email;
+
+    // Eliminar de tb_docentes
+    await Docente.destroy({
       where: { id_docente: id }
     });
 
-    if (num == 1) {
-      res.send({ message: "Docente eliminado correctamente." });
-    } else {
-      res.send({ message: `No se pudo eliminar. Tal vez el id=${id} no existe.` });
+    // Eliminar también de tb_usuarios para liberar el correo
+    if (email) {
+      await Usuario.destroy({
+        where: { email }
+      });
     }
+
+    res.send({ message: "Docente y usuario eliminados correctamente." });
   } catch (error) {
     res.status(500).send({
       message: "Error al eliminar docente con id=" + id
