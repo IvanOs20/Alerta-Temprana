@@ -6,8 +6,8 @@ const FRONTEND_URL = process.env.CLIENT_URL || "http://localhost:5173";
 // 1. Configuración del transporte optimizada para Gmail en la nube
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.MAIL_USER || process.env.EMAIL_USER, 
     pass: process.env.MAIL_PASS || process.env.EMAIL_PASS, 
