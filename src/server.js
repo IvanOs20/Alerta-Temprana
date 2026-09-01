@@ -12,6 +12,8 @@ app.use(helmet());
 
 // 3. CONFIGURAR CORS CON TODAS LAS CABECERAS NECESARIAS
 const origenesPermitidos = [
+  'https://sigejod.com',
+  'https://www.sigejod.com',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'https://sigejob-client.vercel.app',
