@@ -12,7 +12,7 @@ const enviarCorreoActivacion = async (emailDestino, nombre, token) => {
     console.log("🔗 URL DE ACTIVACIÓN:", urlActivacion);
 
     const { data, error } = await resend.emails.send({
-      from: "Sistema Escolar <onboarding@resend.dev>",
+      from: "Sistema Escolar sigeJOD <notificaciones@sigejod.com>",
       to: [emailDestino],
       subject: "Active su cuenta - Sistema Escolar",
       html: `
@@ -49,7 +49,7 @@ const enviarCorreoRecuperacion = async (emailDestino, nombre, token) => {
     console.log("🔗 URL DE RECUPERACIÓN:", urlRecuperacion);
 
     const { data, error } = await resend.emails.send({
-      from: "Sistema Escolar <onboarding@resend.dev>",
+      from: "Sistema Escolar sigeJOD <notificaciones@sigejod.com>",
       to: [emailDestino],
       subject: "Restablecer Contraseña 🔐",
       html: `
