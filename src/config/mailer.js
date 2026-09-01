@@ -3,7 +3,7 @@ const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // 🌐 Base URL dinámica: Usa CLIENT_URL en producción o localhost en desarrollo
-const FRONTEND_URL = process.env.CLIENT_URL || "http://localhost:5173";
+const FRONTEND_URL = process.env.CLIENT_URL || "https://sigejod.com";
 
 // 1. ACTIVACIÓN (Cuenta nueva)
 const enviarCorreoActivacion = async (emailDestino, nombre, token) => {
