@@ -114,4 +114,4 @@ const enviarCorreoRecuperacion = async (emailDestino, nombre, token) => {
 module.exports = { 
   enviarCorreoActivacion,
   enviarCorreoRecuperacion 
-};s
+};
