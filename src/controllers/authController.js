@@ -9,9 +9,6 @@ const mailer = require("../config/mailer.js");
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// En producción, usa variables de entorno (.env)
-const SECRET_KEY = process.env.SECRET_KEY || 'secreto_super_seguro';
-
 // -------------------------------------------------------------------------
 // 1. ACTIVAR CUENTA (El link del correo llega aquí)
 // -------------------------------------------------------------------------
@@ -105,8 +102,8 @@ exports.login = async (req, res) => {
         rol: usuario.rol, 
         id_perfil: idPerfil 
       }, 
-      SECRET_KEY, 
-      { expiresIn: 86400 } // 24 horas
+      process.env.SECRET_KEY,
+      { algorithm: 'HS256', expiresIn: 86400 } // 24 horas
     );
 
     // F. CONSTRUIR RESPUESTA

@@ -1,4 +1,10 @@
 require('dotenv').config(); // Carga las variables de entorno
+
+if (!process.env.SECRET_KEY || process.env.SECRET_KEY.trim().length < 32) {
+    console.error('ERROR CRÍTICO: SECRET_KEY es obligatoria y debe tener al menos 32 caracteres.');
+    process.exit(1);
+}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');

@@ -13,3 +13,8 @@ dist/
 build/
 coverage/
 *.log
+
+# Scripts con operaciones destructivas o administrativas locales
+limpiarBaseDatos.js
+crearAdminRemoto.js
+scripts/privados/
