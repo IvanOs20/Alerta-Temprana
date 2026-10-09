@@ -49,6 +49,8 @@ router.post('/activar-cuenta', passLimiter, authController.activarCuenta);
 
 // 2. Ruta para iniciar sesión (Protegida contra fuerza bruta)
 router.post('/login', loginLimiter, authController.login);
+router.post('/refresh', authController.refresh);
+router.post('/logout', authController.logout);
 
 // 3. Rutas de Recuperación de Contraseña
 router.post('/forgot-password', mailLimiter, authController.forgotPassword);

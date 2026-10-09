@@ -9,6 +9,52 @@ const mailer = require("../config/mailer.js");
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const Sesion = db.tb_sesiones;
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  path: '/api/auth',
+  maxAge: 7 * 24 * 60 * 60 * 1000
+};
+
+const crearAccessToken = (usuario, idPerfil) => jwt.sign(
+  {
+    id_usuario: usuario.id_usuario,
+    rol: usuario.rol,
+    id_perfil: idPerfil,
+    token_use: 'access'
+  },
+  process.env.SECRET_KEY,
+  { algorithm: 'HS256', expiresIn: '15m' }
+);
+
+const crearRefreshToken = () => crypto.randomBytes(40).toString('hex');
+
+const hashRefreshToken = (refreshToken) => crypto
+  .createHash('sha256')
+  .update(refreshToken)
+  .digest('hex');
+
+const guardarSesion = async (usuarioId, refreshToken, req) => {
+  const expiraEn = new Date(Date.now() + cookieOptions.maxAge);
+
+  return Sesion.create({
+    id_usuario: usuarioId,
+    token_hash: hashRefreshToken(refreshToken),
+    expira_en: expiraEn,
+    ip_address: req.ip,
+    user_agent: req.get('user-agent') || null
+  });
+};
+
+const emitirRefreshToken = async (usuarioId, req, res) => {
+  const refreshToken = crearRefreshToken();
+  await guardarSesion(usuarioId, refreshToken, req);
+  res.cookie('refreshToken', refreshToken, cookieOptions);
+  return refreshToken;
+};
+
 // -------------------------------------------------------------------------
 // 1. ACTIVAR CUENTA (El link del correo llega aquí)
 // -------------------------------------------------------------------------
@@ -96,15 +142,8 @@ exports.login = async (req, res) => {
     }
 
     // E. Generar Token
-    const token = jwt.sign(
-      { 
-        id_usuario: usuario.id_usuario, 
-        rol: usuario.rol, 
-        id_perfil: idPerfil 
-      }, 
-      process.env.SECRET_KEY,
-      { algorithm: 'HS256', expiresIn: 86400 } // 24 horas
-    );
+    const accessToken = crearAccessToken(usuario, idPerfil);
+    await emitirRefreshToken(usuario.id_usuario, req, res);
 
     // F. CONSTRUIR RESPUESTA
     const dataResponse = {
@@ -113,7 +152,8 @@ exports.login = async (req, res) => {
       email: usuario.email,
       rol: usuario.rol,
       id_perfil: idPerfil,
-      accessToken: token
+      accessToken,
+      token: accessToken
     };
 
     if (hijosEncontrados !== null) {
@@ -124,6 +164,97 @@ exports.login = async (req, res) => {
 
   } catch (error) {
     res.status(500).send({ message: error.message });
+  }
+};
+
+exports.refresh = async (req, res) => {
+  const refreshToken = req.cookies && req.cookies.refreshToken;
+
+  if (!refreshToken) {
+    return res.status(401).send({ message: "Refresh token no proporcionado" });
+  }
+
+  try {
+    const tokenHash = hashRefreshToken(refreshToken);
+    const sesion = await Sesion.findOne({ where: { token_hash: tokenHash } });
+
+    if (!sesion || sesion.expira_en < new Date()) {
+      res.clearCookie('refreshToken', cookieOptions);
+      return res.status(401).send({ message: "Sesión inválida o expirada" });
+    }
+
+    if (sesion.revocado) {
+      await Sesion.update(
+        { revocado: true },
+        { where: { id_usuario: sesion.id_usuario } }
+      );
+      res.clearCookie('refreshToken', cookieOptions);
+      return res.status(403).send({
+        message: "Alerta de seguridad: Sesión comprometida. Inicie sesión nuevamente"
+      });
+    }
+
+    const [sesionRevocada] = await Sesion.update(
+      { revocado: true },
+      { where: { id_sesion: sesion.id_sesion, revocado: false } }
+    );
+
+    if (sesionRevocada !== 1) {
+      await Sesion.update(
+        { revocado: true },
+        { where: { id_usuario: sesion.id_usuario } }
+      );
+      res.clearCookie('refreshToken', cookieOptions);
+      return res.status(403).send({
+        message: "Alerta de seguridad: Sesión comprometida. Inicie sesión nuevamente"
+      });
+    }
+
+    const usuario = await Usuario.findByPk(sesion.id_usuario);
+    if (!usuario || !usuario.cuenta_activa) {
+      res.clearCookie('refreshToken', cookieOptions);
+      return res.status(401).send({ message: "Sesión inválida o expirada" });
+    }
+
+    let idPerfil = null;
+    if (usuario.rol === 'docente') {
+      const docente = await Docente.findOne({ where: { email: usuario.email } });
+      if (docente) idPerfil = docente.id_docente;
+    } else if (usuario.rol === 'tutor') {
+      const tutor = await Tutor.findOne({ where: { email: usuario.email } });
+      if (tutor) idPerfil = tutor.id_tutor;
+    }
+
+    const nuevoRefreshToken = crearRefreshToken();
+    await guardarSesion(usuario.id_usuario, nuevoRefreshToken, req);
+    res.cookie('refreshToken', nuevoRefreshToken, cookieOptions);
+
+    return res.status(200).send({
+      accessToken: crearAccessToken(usuario, idPerfil)
+    });
+  } catch (error) {
+    return res.status(500).send({ message: error.message });
+  }
+};
+
+exports.logout = async (req, res) => {
+  try {
+    const refreshToken = req.cookies && req.cookies.refreshToken;
+
+    if (refreshToken) {
+      await Sesion.update(
+        { revocado: true },
+        { where: { token_hash: hashRefreshToken(refreshToken) } }
+      );
+    }
+
+    res.clearCookie('refreshToken', cookieOptions);
+    return res.status(200).send({
+      ok: true,
+      mensaje: 'Sesión finalizada con éxito'
+    });
+  } catch (error) {
+    return res.status(500).send({ message: error.message });
   }
 };
 

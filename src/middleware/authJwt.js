@@ -21,6 +21,12 @@ const verifyToken = (req, res, next) => {
       });
     }
 
+    if (!decoded || decoded.token_use !== 'access') {
+      return res.status(403).send({
+        message: "Token no autorizado para este recurso"
+      });
+    }
+
     // Si pasa, guardamos los datos del usuario en la petición (req)
     // Así los controladores sabrán quién es.
     req.userId = decoded.id_usuario;

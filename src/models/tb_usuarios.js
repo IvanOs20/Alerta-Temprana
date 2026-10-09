@@ -49,5 +49,9 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: false
   });
 
+  tb_usuarios.associate = (models) => {
+    tb_usuarios.hasMany(models.tb_sesiones, { foreignKey: 'id_usuario' });
+  };
+
   return tb_usuarios;
 };

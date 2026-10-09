@@ -5,9 +5,15 @@ if (!process.env.SECRET_KEY || process.env.SECRET_KEY.trim().length < 32) {
     process.exit(1);
 }
 
+if (!process.env.REFRESH_SECRET_KEY || process.env.REFRESH_SECRET_KEY.trim().length < 32) {
+    console.error('ERROR CRÍTICO: REFRESH_SECRET_KEY es obligatoria y debe tener al menos 32 caracteres.');
+    process.exit(1);
+}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
 const app = express();
 
 // 1. IMPORTAR LA BASE DE DATOS
@@ -50,6 +56,7 @@ app.use(cors({
 // Middlewares para JSON y Formularios
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // --- IMPORTAR RUTAS ---
 const alumnoRoutes = require('./routes/alumnoRoutes');
