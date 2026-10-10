@@ -31,6 +31,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true // Se borrará una vez que active la cuenta
     },
+    token_activacion_expires_at: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
     cuenta_activa: {
       type: DataTypes.BOOLEAN,
       defaultValue: false // Nace desactivada hasta que den clic al correo

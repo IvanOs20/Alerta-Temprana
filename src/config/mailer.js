@@ -9,8 +9,6 @@ const FRONTEND_URL = process.env.CLIENT_URL || "https://sigejod.com";
 const enviarCorreoActivacion = async (emailDestino, nombre, token) => {
   try {
     const urlActivacion = `${FRONTEND_URL}/activar-cuenta?token=${token}`; 
-    console.log("🔗 URL DE ACTIVACIÓN:", urlActivacion);
-
     const { data, error } = await resend.emails.send({
       from: "Sistema Escolar sigeJOD <notificaciones@sigejod.com>",
       to: [emailDestino],
@@ -50,7 +48,7 @@ const enviarCorreoActivacion = async (emailDestino, nombre, token) => {
       return false;
     }
 
-    console.log("✅ Correo de activación enviado a:", emailDestino, "| ID:", data?.id);
+    console.log("✅ Correo de activación enviado exitosamente");
     return true;
   } catch (error) {
     console.error("❌ Error enviando activación:", error.message || error);
@@ -62,8 +60,6 @@ const enviarCorreoActivacion = async (emailDestino, nombre, token) => {
 const enviarCorreoRecuperacion = async (emailDestino, nombre, token) => {
   try {
     const urlRecuperacion = `${FRONTEND_URL}/reset-password/${token}`; 
-    console.log("🔗 URL DE RECUPERACIÓN:", urlRecuperacion);
-
     const { data, error } = await resend.emails.send({
       from: "Sistema Escolar sigeJOD <notificaciones@sigejod.com>",
       to: [emailDestino],
@@ -103,7 +99,7 @@ const enviarCorreoRecuperacion = async (emailDestino, nombre, token) => {
       return false;
     }
 
-    console.log("✅ Correo de recuperación enviado a:", emailDestino, "| ID:", data?.id);
+    console.log("✅ Correo de recuperación enviado exitosamente");
     return true;
   } catch (error) {
     console.error("❌ Error enviando recuperación:", error.message || error);

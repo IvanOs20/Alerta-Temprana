@@ -50,6 +50,7 @@ exports.create = async (req, res) => {
       rol: 'tutor',
       id_perfil: nuevoTutor.id_tutor,
       token_activacion: token,
+      token_activacion_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
       cuenta_activa: false
     });
 
@@ -94,6 +95,13 @@ exports.findOne = async (req, res) => {
     });
 
     if (data) {
+      if (
+        req.userRol === 'tutor' &&
+        Number(id) !== Number(req.idPerfil)
+      ) {
+        return res.status(403).send({ message: "No autorizado" });
+      }
+
       res.send(data);
     } else {
       res.status(404).send({

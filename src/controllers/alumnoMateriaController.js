@@ -83,6 +83,23 @@ exports.verAlumnosEnMateria = async (req, res) => {
 exports.calificar = async (req, res) => {
   const { id_alumno, id_materia } = req.params;
   try {
+    if (req.userRol !== 'admin') {
+      const alumno = await Alumno.findOne({
+        where: { id_alumno: Number(id_alumno) },
+        include: [{
+          model: db.tb_grupos,
+          where: { id_docente: Number(req.idPerfil) },
+          required: true
+        }]
+      });
+
+      if (!alumno) {
+        return res.status(403).send({
+          message: "No tienes autorización para calificar a este alumno"
+        });
+      }
+    }
+
     const [actualizado] = await AlumnoMateria.update(
       { calificacion: req.body.calificacion },
       { where: { id_alumno: id_alumno, id_materia: id_materia } }

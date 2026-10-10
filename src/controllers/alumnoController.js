@@ -42,12 +42,14 @@ exports.findAll = async (req, res) => {
 
     // CASO 1: Si es DOCENTE -> Traer solo los alumnos de su grupo
     if (rol === 'docente') {
-      const grupoDocente = await Grupo.findOne({
-        where: { id_docente: idPerfil }
+      const gruposDocente = await Grupo.findAll({
+        attributes: ['id_grupo'],
+        where: { id_docente: Number(idPerfil) },
+        raw: true
       });
 
-      if (grupoDocente) {
-        condicionWhere.id_grupo = grupoDocente.id_grupo;
+      if (gruposDocente.length) {
+        condicionWhere.id_grupo = gruposDocente.map(grupo => grupo.id_grupo);
       } else {
         return res.send([]); // Docente sin grupo asignado
       }
@@ -82,6 +84,7 @@ exports.findAll = async (req, res) => {
 // 3. OBTENER UN alumno por ID (PK: id_alumno)
 exports.findOne = async (req, res) => {
   const id = req.params.id;
+  const rol = (req.rol || req.userRol || '').toLowerCase();
 
   try {
     const data = await Alumno.findByPk(id, {
@@ -91,13 +94,37 @@ exports.findOne = async (req, res) => {
       ]
     });
 
-    if (data) {
-      res.send(data);
-    } else {
-      res.status(404).send({
-        message: `No se encontró el alumno con id=${id}.`
+    if (!data) {
+      return res.status(404).send({
+        message: "Alumno no encontrado"
       });
     }
+
+    if (
+      rol === 'tutor' &&
+      data.id_tutor !== Number(req.idPerfil)
+    ) {
+      return res.status(403).send({
+        message: "No autorizado para consultar este alumno"
+      });
+    }
+
+    if (rol === 'docente') {
+      const grupoDocente = await Grupo.findOne({
+        where: {
+          id_grupo: data.id_grupo,
+          id_docente: Number(req.idPerfil)
+        }
+      });
+
+      if (!grupoDocente) {
+        return res.status(403).send({
+          message: "No autorizado para consultar este alumno"
+        });
+      }
+    }
+
+    res.send(data);
   } catch (error) {
     res.status(500).send({
       message: "Error al buscar el alumno con id=" + id

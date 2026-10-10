@@ -49,6 +49,7 @@ exports.create = async (req, res) => {
       rol: 'docente',
       id_perfil: nuevoDocente.id_docente,
       token_activacion: token,
+      token_activacion_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
       cuenta_activa: false
     });
 

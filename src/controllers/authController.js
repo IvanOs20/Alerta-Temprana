@@ -64,10 +64,31 @@ exports.activarCuenta = async (req, res) => {
 
     // A. Buscar al usuario que tenga ese token pendiente
     const usuario = await Usuario.findOne({ 
-      where: { token_activacion: token } 
+      where: {
+        token_activacion: token,
+        cuenta_activa: false,
+        token_activacion_expires_at: { [Op.gt]: new Date() }
+      }
     });
 
     if (!usuario) {
+      const tokenExpirado = await Usuario.findOne({
+        where: {
+          token_activacion: token,
+          cuenta_activa: false
+        }
+      });
+
+      if (
+        tokenExpirado &&
+        tokenExpirado.token_activacion_expires_at &&
+        tokenExpirado.token_activacion_expires_at <= new Date()
+      ) {
+        return res.status(400).send({
+          message: "El enlace de activación ha expirado. Solicite uno nuevo."
+        });
+      }
+
       return res.status(400).send({ 
         message: "Token inválido o expirado. Es posible que la cuenta ya esté activa." 
       });
@@ -81,7 +102,8 @@ exports.activarCuenta = async (req, res) => {
       { 
         password: hashedPassword,
         cuenta_activa: true,
-        token_activacion: null 
+        token_activacion: null,
+        token_activacion_expires_at: null
       },
       { where: { id_usuario: usuario.id_usuario } }
     );
